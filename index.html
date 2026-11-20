@@ -22,15 +22,15 @@ dates.forEach(d=>el('period').add(new Option(fmt(d),fmt(d))));
 const today=fmt(new Date());el('period').value=dates.some(d=>fmt(d)===today)?today:fmt(dates[0]);
 const avg=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 function scores(group){return [2,3,4].map(i=>avg(group.map(r=>r[i]).filter(Number.isFinite)))}
-function bar(label,value,color=''){let line=document.createElement('div');line.className='line';line.innerHTML='<span></span><div class="track"><i class="fill"></i></div><b></b>';line.firstChild.textContent=label;line.lastChild.textContent=value===null?'—':value.toFixed(2);let fill=line.querySelector('i');fill.classList.add(color||'production');fill.style.width=(value||0)*20+'%';return line}
+function bar(label,value,color=''){let line=document.createElement('div');line.className='line';line.innerHTML='<span></span><div class="track"><i class="fill"></i></div><b></b>';line.firstChild.textContent=label;line.lastChild.textContent=value===null?'—':value.toFixed(2);let fill=line.querySelector('i');fill.classList.add(color||'production');fill.style.width=(value||0)*10+'%';return line}
 function render(){
  const rated=rows.filter(r=>Number.isFinite(r[4]));
  const cutoff=el('period').value || rated.at(-1)?.[0] || fmt(dates[0]);
  const days=dates.map(fmt), index=days.indexOf(cutoff);
  const history=rows.filter(r=>days.indexOf(r[0])>=0&&days.indexOf(r[0])<=index);
  const name=id=>'Stall '+String(id).padStart(2,'0');
- el('dayCaption').textContent=cutoff+' · Combined score / 5';
- el('overallCaption').textContent='Through '+cutoff+' · Mean paired-day score / 5';
+ el('dayCaption').textContent=cutoff+' · Combined score / 10';
+ el('overallCaption').textContent='Through '+cutoff+' · Mean paired-day score / 10';
  function ranking(target,data){
   const box=el(target);box.replaceChildren();
   const list=Array.from({length:55},(_,i)=>{const values=data.filter(r=>r[1]===i+1&&r[4]!==null).map(r=>r[4]);return {id:i+1,v:avg(values),n:values.length}}).filter(g=>g.v!==null).sort((a,b)=>b.v-a.v||a.id-b.id);
@@ -40,7 +40,7 @@ function render(){
  ranking('daily',history.filter(r=>r[0]===cutoff));ranking('ranking',history);
  const visibleDays=el('period').value?days.slice(0,index+1):days;
  const selected=Number(el('stall').value);
- el('legend').textContent='Combined score out of 5 · Darker teal indicates a higher score. A dash means a paired score is pending.';
+ el('legend').textContent='Combined score out of 10 · Darker teal indicates a higher score. A dash means a paired score is pending.';
  const scale=document.createElement('i');scale.className='scale';el('legend').prepend(scale);
  const box=el('comparison');box.replaceChildren();
  if(!loaded){box.textContent='Awaiting data connection.';return}
@@ -56,7 +56,7 @@ function render(){
   for(const day of visibleDays){
    const value=values.get(day+'|'+id),cell=row.insertCell();
    cell.textContent=Number.isFinite(value)?value.toFixed(2):'—';
-   if(Number.isFinite(value)){cell.style.background='hsl(176 48% '+(96-value*13)+'%)';cell.style.color=value>=4?'white':'#182d2b'}
+   if(Number.isFinite(value)){cell.style.background='hsl(176 48% '+(96-value*6.5)+'%)';cell.style.color=value>=8?'white':'#182d2b'}
   }
  }
  box.append(table);
@@ -65,7 +65,7 @@ function render(){
 function parse(csv){
  const lines=csv.trim().split(/\r?\n/).map(l=>l.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
  if(lines.shift().slice(0,5).join(',')!=='Date,Stall,Production,Closing,Combined')throw Error();
- return lines.filter(r=>r[0]).map(r=>{const d=new Date(r[0]+' 00:00 UTC');if(!Number.isFinite(+d)||!(+r[1]>=1&&+r[1]<=55))throw Error();return [fmt(d),+r[1],...[2,3,4].map(i=>{if(!r[i])return null;const n=Number(r[i]);if(!(n>=1&&n<=5))throw Error();return n})]});
+ return lines.filter(r=>r[0]).map(r=>{const d=new Date(r[0]+' 00:00 UTC');if(!Number.isFinite(+d)||!(+r[1]>=1&&+r[1]<=55))throw Error();return [fmt(d),+r[1],...[2,3,4].map(i=>{if(!r[i])return null;const n=Number(r[i]);if(!(n>=1&&n<=10))throw Error();return n})]});
 }
 let serial=0,last='';
 async function refresh(){const seq=++serial;try{let u=new URL(safeUrl(source));const response=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error();const next=parse(await response.text());if(seq!==serial)return;rows=next;loaded=true;last=new Date().toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata'});el('status').textContent='Sheet checked at '+last+' IST · Refreshes every 60 seconds';render()}catch{if(seq!==serial)return;el('status').textContent=loaded?'Refresh unavailable · Showing the last successful read at '+last+' IST.':'The published sheet is temporarily unavailable. Retrying automatically.';render()}}
